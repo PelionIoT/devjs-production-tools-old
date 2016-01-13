@@ -1,3 +1,4 @@
+var util = require('util');
 var argv = require('optimist')
     .alias('o','output')
     .alias('m','merge')
