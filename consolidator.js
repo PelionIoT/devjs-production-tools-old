@@ -1,19 +1,10 @@
 var argv = require('optimist')
     .alias('o','output')
+    .alias('m','merge')
+    .describe('m','merge into existing package.json')
     .alias('v','verbose')
     .describe('v','verbose, use a -v2 or -v3 for more information')
     .argv;
-
-
-var outfile = "./package.json";
-if(argv.o) {
-    outfile = argv.o;
-}
-
-if(argv._.length < 1) {
-    console.log("consolidator.js [-o filename] dir [dir...]");
-    process.exit(1);
-}
 
 var log = function() {
     //var args = Array.prototype.slice.call(arguments);
@@ -51,11 +42,55 @@ var verbose2 = function() {
 }
 
 
+var outfile = "./package.json";
+if(arvg.o && argv.m) {
+    log_err("Can't use both '-m' and '-o'");
+    process.exit(1);
+}
+if(argv.o) {
+    outfile = argv.o;
+}
+if(argv.m) {
+    outfile = argv.m;
+}
+
+
+if(argv._.length < 1) {
+    console.log("consolidator.js [-o filename] dir [dir...]");
+    process.exit(1);
+}
+
+
+
 var path = require('path');
 var fs = require('fs');
 
 
 var packages = {};
+
+if(argv.m) {
+
+    try {
+        json = fs.readFileSync(argv.m, 'utf8');
+    } catch(e) {
+        log_err("Error reading:",fname);
+        log_err("  Details: " + util.inspect(e));
+        process.exit(1);
+    }
+    if(json) {
+        try {
+            obj = JSON.parse(json)
+        } catch(e) {
+            log_err("Error parsing JSON:",fname);
+            log_err("  Details: " + util.inspect(e));
+            process.exit(1)
+        }
+        output = obj;
+        packages = object.dependencies;
+    }
+}
+
+
 
 var dirs = argv._;
 for (var n=0;n<dirs.length;n++) {
@@ -108,30 +143,35 @@ var output = {
 
 var ok = false;
 
-try {
-    var stats = fs.statSync(outfile);
-} catch(e) {
-    if(e.code == 'ENOENT') {
-        ok = true;
-        // ok, great
-    } else {
-        log_err("File system:",e);
+
+if(!argv.m) {
+    try {
+        var stats = fs.statSync(outfile);
+    } catch(e) {
+        if(e.code == 'ENOENT') {
+            ok = true;
+            // ok, great
+        } else {
+            log_err("File system:",e);
+        }
     }
+
+    if(stats) {
+        if(stats.isFile() && !argv.o) {
+            log_err("File:",outfile,"exists. Overwrite it using -o or -m. Not writing",outfile);
+            process.exit(1);
+        } else {
+            log_err("File:",outfile,"appear to not be a file but exists. Remove or change output via -o");
+            process.exit(1);
+        }
+    }
+
 }
 
-if(stats) {
-    if(stats.isFile() && !argv.o) {
-        log_err("File:",outfile,"exists. Overwrite it using -o. Not writing",outfile);
-        process.exit(1);
-    } else {
-        log_err("File:",outfile,"appear to not be a file but exists. Remove or change output via -o");
-        process.exit(1);
-    }
-}
 
 if(ok) {
     var outstr = JSON.stringify(output,null,'\t');
-    fs.writeFileSync(outfile,outstr,{encoding:'utf8'});
+    fs.writeFileSync(outfile,outstr,{encoding:'utf8'});        
     log("Done. Wrote",outfile);
 }
 //fs.writeFileSync()
