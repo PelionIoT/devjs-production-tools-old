@@ -44,7 +44,7 @@ var verbose2 = function() {
 
 
 var outfile = "./package.json";
-if(arvg.o && argv.m) {
+if(argv.o && argv.m) {
     log_err("Can't use both '-m' and '-o'");
     process.exit(1);
 }
@@ -57,7 +57,7 @@ if(argv.m) {
 
 
 if(argv._.length < 1) {
-    console.log("consolidator.js [-o filename] dir [dir...]");
+    console.log("consolidator.js [-o filename | -m filename ] dir [dir...]");
     process.exit(1);
 }
 
@@ -70,7 +70,6 @@ var fs = require('fs');
 var packages = {};
 
 if(argv.m) {
-
     try {
         json = fs.readFileSync(argv.m, 'utf8');
     } catch(e) {
@@ -87,7 +86,9 @@ if(argv.m) {
             process.exit(1)
         }
         output = obj;
-        packages = object.dependencies;
+        packages = obj.dependencies;
+        log("Merge with existing file:",argv.m);
+        log("   existing dependencies:",packages);
     }
 }
 
