@@ -10,4 +10,10 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 NODE=${NODE-node}
 
+if [ ! -d $DIR/node_modules ]; then
+    echo "Installing prereqs for consolidator."
+    npm install
+    echo "Done."
+fi
+
 NODE_PATH=$NODE_PATH:$DIR/node_modules $NODE $DIR/consolidator.js "$@"
