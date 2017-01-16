@@ -5,6 +5,8 @@ var argv = require('optimist')
     .describe('m','merge into existing package.json')
     .alias('v','verbose')
     .describe('v','verbose, use a -v2 or -v3 for more information')
+    .alias('d','drop')
+    .describe('d','drop package')    
     .argv;
 
 var log = function() {
@@ -13,12 +15,28 @@ var log = function() {
     console.log.apply(undefined,arguments);
 }
 
+var isArray = function(a) {
+    return (a.constructor === Array);
+}
+
 var log_err = function() {
     var args = Array.prototype.slice.call(arguments);
     args.unshift("ERROR");
     console.error.apply(undefined,args);
 }
 
+var excludes = {};
+
+if(argv.d) {
+    if(isArray(argv.d)) {
+        var n = argv.d.length;
+        while(n--) {
+            excludes[argv.d[n]] = true;
+        }
+    } else {
+        excludes[argv.d] = true;
+    }
+}
 
 var log_warn = function() {
     var args = Array.prototype.slice.call(arguments);
@@ -118,11 +136,15 @@ for (var n=0;n<dirs.length;n++) {
         log("processing:",obj.name,"["+dname+"]");
         var keyz = Object.keys(obj.dependencies);
         for(var p=0;p<keyz.length;p++) {
-            if(packages[keyz[p]] && packages[keyz[p]] != obj.dependencies[keyz[p]]) {
-                log_warn("Module",obj.name,"["+dname+"] wants version",obj.dependencies[keyz[p]],"of",keyz[p],"- conflicts with version",packages[keyz[p]],"Replacing!");
+            if(!excludes[keyz[p]]) {
+                if(packages[keyz[p]] && packages[keyz[p]] != obj.dependencies[keyz[p]]) {
+                    log_warn("Module",obj.name,"["+dname+"] wants version",obj.dependencies[keyz[p]],"of",keyz[p],"- conflicts with version",packages[keyz[p]],"Replacing!");
+                }
+                packages[keyz[p]] = obj.dependencies[keyz[p]];
+                log("  ...Package",keyz[p],"-->",packages[keyz[p]]);
+            } else {
+                log(" DROPPING package:",keyz[p]);
             }
-            packages[keyz[p]] = obj.dependencies[keyz[p]];
-            log("  ...Package",keyz[p],"-->",packages[keyz[p]]);
         }
     }
 }
@@ -144,6 +166,7 @@ var output = {
 }
 
 var ok = false;
+
 
 
 if(!argv.m) {
