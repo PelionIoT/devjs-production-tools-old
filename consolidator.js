@@ -1,6 +1,7 @@
 var util = require('util');
 var argv = require('optimist')
     .alias('o','output')
+    .alias('O','override')
     .alias('m','merge')
     .describe('m','merge into existing package.json')
     .alias('v','verbose')
@@ -75,7 +76,7 @@ if(argv.m) {
 
 
 if(argv._.length < 1) {
-    console.log("consolidator.js [-o filename | -m filename ] dir [dir...]");
+    console.log("consolidator.js [ -O overrides_file ] [-o filename | -m filename ] dir [dir...]");
     process.exit(1);
 }
 
@@ -108,6 +109,44 @@ if(argv.m) {
         log("Merge with existing file:",argv.m);
         log("   existing dependencies:",packages);
     }
+}
+
+var overrides = {};
+/**
+ * Override file shold be of format:
+ * {
+ *     
+ *        "devjs-globalloger": "https://github.com/WigWagCo/devjs-globallogger.git",
+ *       "babel-core": "^6.14.0"
+ *
+ * }
+ * Just like the dependencies section in package.json
+ * @param  {[type]} argv.O [description]
+ * @return {[type]}        [description]
+ */
+if(argv.O) {
+    try {
+        json = fs.readFileSync(argv.O, 'utf8');
+    } catch(e) {
+        log_err("Error reading:",argv.O);
+        log_err("  Details: " + util.inspect(e));
+        process.exit(1);
+    }
+    if(json) {
+        try {
+            obj = JSON.parse(json)
+        } catch(e) {
+            log_err("Error parsing JSON:",argv.O);
+            log_err("  Details: " + util.inspect(e));
+            process.exit(1)
+        }
+        if (typeof obj != 'object') {
+            log_err("overrides file",argv.O,"has incorrect format");
+            process.exit(1)            
+        }
+        overrides = obj;
+        log("   Overrides loaded.");
+    }    
 }
 
 
@@ -146,6 +185,14 @@ for (var n=0;n<dirs.length;n++) {
                 log(" DROPPING package:",keyz[p]);
             }
         }
+    }
+}
+
+if (overrides && typeof overrides == 'object') {
+    var keyz = Object.keys(overrides);
+    for(var n=0;n<keyz.length;n++) {
+        log("  OVERRIDING",keyz[n],"to",overrides[keyz[n]])
+        packages[keyz[n]] = overrides[keyz[n]];
     }
 }
 
